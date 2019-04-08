@@ -1,0 +1,5 @@
+<launch>
+    <node name="factory_settings" pkg="factory_settings" type="main.py" respawn="true" />
+    <rosparam file="$(find factory_settings)/config/factory_settings.yaml" command="load"/>
+
+</launch>
