@@ -10,6 +10,7 @@ project(factory_settings)
 find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
+  mrobot_srvs
 )
 
 ## System dependencies are found with CMake's conventions

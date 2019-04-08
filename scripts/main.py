@@ -7,9 +7,8 @@ import os
 import yaml
 import rospy
 import rospkg
+from mrobot_srvs.srv import JString
 
-
-#path = "/home/kaka/.ros/factory_settings.yaml"
 path = None 
 settings = None
 
@@ -23,8 +22,21 @@ def read_param(param):
         param_file = open(path, 'r')
         global settings
         settings = yaml.load(param_file)
-        rospy.loginfo("get param string: %s", str(settings))
+        rospy.loginfo("get param string: %s", settings)
         rospy.loginfo("%s: %s", param, settings.get(param, ''))
+        param_file.close()
+
+
+def read_all_params():
+    global path
+    if not os.path.exists(path):
+        rospy.logerr("%s: file not exists", path)
+    else:
+        rospy.loginfo("%s: open ok", path)
+        param_file = open(path, 'r')
+        global settings
+        settings = yaml.load(param_file)
+        rospy.loginfo("get all params: %s", settings)
         param_file.close()
 
 def write_param(param, value):
@@ -36,19 +48,50 @@ def write_param(param, value):
         param_file = open(path, 'w')
         global settings
         rospy.loginfo("settings: %s", settings)
-        settings[param] = value
-        yaml.dump(settings, param_file)
+        if settings is not None:
+            if param in settings:
+                rospy.loginfo("get param %s", param)
+                old_value = settings[param]
+                if old_value != value:
+                    rospy.loginfo("change param %s :  %s -> %s ", param, old_value, value)
+                    settings[param] = value
+                    yaml.dump(settings, param_file)
+                else:
+                    rospy.logwarn("param %s: new value == old_value", param)
+                    yaml.dump(settings, param_file)
+            else:
+                rospy.logwarn("have no param %s, add", param)
+                settings[param] = value
+                yaml.dump(settings, param_file)
+        else:
+            settings = {param: value}
+
         param_file.close()
 
+def set_param(req):
+    rospy.loginfo("req.request: %s", req.request)
+    setting = json.loads(req.request)
+    for param in setting:
+        rospy.loginfo("param: %s", param)
+        value = setting[param]
+        rospy.loginfo("value: %s", value)
+        write_param(param, value)
+
+    rospy.loginfo("setting: %s", setting)
+
+    return [True, 'ok']
 
 def main():
     global path
     rospy.init_node("factory_settings", anonymous = True)
+    rospy.Service('/factory_settings/set_param', JString, set_param)
     path = os.path.join(rospkg.get_ros_home(), "factory_settings.yaml")
     rospy.loginfo("path: %s", path)
-    read_param("lock_num")
-    write_param("conveyor_lock", True)
-    write_param("audio_channel", 'rk')
+    read_all_params()
+    #read_param("lock_num")
+    #write_param("conveyor_lock", True)
+    #write_param("audio_channel", 'rk')
+    rospy.spin()
 
 if __name__  == '__main__':
     try:
