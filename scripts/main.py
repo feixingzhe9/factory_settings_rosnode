@@ -18,7 +18,7 @@ def read_param(param):
     if not os.path.exists(path):
         rospy.logerr("%s: file not exists", path)
     else:
-        rospy.loginfo("%s: open ok", path)
+        #rospy.loginfo("%s: open ok", path)
         param_file = open(path, 'r')
         global settings
         settings = yaml.load(param_file)
@@ -36,6 +36,8 @@ def read_all_params():
         param_file = open(path, 'r')
         global settings
         settings = yaml.load(param_file)
+        for param in settings:
+            rospy.set_param(param, settings[param])
         rospy.loginfo("get all params: %s", settings)
         param_file.close()
 
@@ -69,7 +71,7 @@ def write_param(param, value):
         param_file.close()
 
 def set_param(req):
-    rospy.loginfo("req.request: %s", req.request)
+    rospy.loginfo("set param, req.request: %s", req.request)
     setting = json.loads(req.request)
     for param in setting:
         rospy.loginfo("param: %s", param)
