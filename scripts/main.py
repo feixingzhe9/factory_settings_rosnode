@@ -8,10 +8,10 @@ import yaml
 import rospy
 import rospkg
 from mrobot_srvs.srv import JString
+from mrobot_srvs.srv import KVPair
 
 path = None 
 settings = None
-
 
 def read_param(param):
     global path
@@ -32,7 +32,7 @@ def read_all_params():
     if not os.path.exists(path):
         rospy.logerr("%s: file not exists", path)
     else:
-        rospy.loginfo("%s: open ok", path)
+        #rospy.loginfo("%s: open ok", path)
         param_file = open(path, 'r')
         global settings
         settings = yaml.load(param_file)
@@ -46,7 +46,7 @@ def write_param(param, value):
     if not os.path.exists(path):
         rospy.logerr("%s: file not exists", path)
     else:
-        rospy.loginfo("%s: open ok", path)
+        #rospy.loginfo("%s: open ok", path)
         param_file = open(path, 'w')
         global settings
         rospy.loginfo("settings: %s", settings)
@@ -71,28 +71,20 @@ def write_param(param, value):
         param_file.close()
 
 def set_param(req):
-    rospy.loginfo("set param, req.request: %s", req.request)
-    setting = json.loads(req.request)
-    for param in setting:
-        rospy.loginfo("param: %s", param)
-        value = setting[param]
-        rospy.loginfo("value: %s", value)
-        write_param(param, value)
-
-    rospy.loginfo("setting: %s", setting)
+    rospy.loginfo("set param, req.request: %s", req)
+    #setting = json.loads(req)
+    write_param(req.key, req.value)
+    read_all_params()
 
     return [True, 'ok']
 
 def main():
     global path
     rospy.init_node("factory_settings", anonymous = True)
-    rospy.Service('/factory_settings/set_param', JString, set_param)
+    rospy.Service('/factory_settings/set_param', KVPair, set_param)
     path = os.path.join(rospkg.get_ros_home(), "factory_settings.yaml")
     rospy.loginfo("path: %s", path)
     read_all_params()
-    #read_param("lock_num")
-    #write_param("conveyor_lock", True)
-    #write_param("audio_channel", 'rk')
     rospy.spin()
 
 if __name__  == '__main__':
