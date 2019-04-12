@@ -13,18 +13,29 @@ from mrobot_srvs.srv import KVPair
 path = None 
 settings = None
 
-def read_param(param):
+
+def file_init():
     global path
     if not os.path.exists(path):
-        rospy.logerr("%s: file not exists", path)
-    else:
-        #rospy.loginfo("%s: open ok", path)
-        param_file = open(path, 'r')
-        global settings
-        settings = yaml.load(param_file)
-        rospy.loginfo("get param string: %s", settings)
-        rospy.loginfo("%s: %s", param, settings.get(param, ''))
-        param_file.close()
+        rospy.logerr("%s: file not exists, create new one", path)
+        file_handle = open(path, 'w')
+        file_handle.close()
+
+#def read_param(param):
+#    global path
+#    if not os.path.exists(path):
+#        rospy.logerr("%s: file not exists, create new", path)
+#        file_handle = open(file_path, 'w')
+#        file_handle.close()
+#
+#    else:
+#        #rospy.loginfo("%s: open ok", path)
+#        param_file = open(path, 'r')
+#        global settings
+#        settings = yaml.load(param_file)
+#        rospy.loginfo("get param string: %s", settings)
+#        rospy.loginfo("%s: %s", param, settings.get(param, ''))
+#        param_file.close()
 
 
 def read_all_params():
@@ -32,12 +43,12 @@ def read_all_params():
     if not os.path.exists(path):
         rospy.logerr("%s: file not exists", path)
     else:
-        #rospy.loginfo("%s: open ok", path)
         param_file = open(path, 'r')
         global settings
         settings = yaml.load(param_file)
-        for param in settings:
-            rospy.set_param(param, settings[param])
+        if settings is not None:
+            for param in settings:
+                rospy.set_param(param, settings[param])
         rospy.loginfo("get all params: %s", settings)
         param_file.close()
 
@@ -46,7 +57,6 @@ def write_param(param, value):
     if not os.path.exists(path):
         rospy.logerr("%s: file not exists", path)
     else:
-        #rospy.loginfo("%s: open ok", path)
         param_file = open(path, 'w')
         global settings
         rospy.loginfo("settings: %s", settings)
@@ -67,6 +77,7 @@ def write_param(param, value):
                 yaml.dump(settings, param_file)
         else:
             settings = {param: value}
+            yaml.dump(settings, param_file)
 
         param_file.close()
 
@@ -84,6 +95,7 @@ def main():
     rospy.Service('/factory_settings/set_param', KVPair, set_param)
     path = os.path.join(rospkg.get_ros_home(), "factory_settings.yaml")
     rospy.loginfo("path: %s", path)
+    file_init()
     read_all_params()
     rospy.spin()
 
