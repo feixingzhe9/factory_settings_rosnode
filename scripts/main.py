@@ -41,7 +41,7 @@ def check_param_value_valid(param, value):
         return False
     elif param == CONVEYOR_LOCK:
         if isinstance(value, str):
-            if value == "True" or value == "False":
+            if value == "True" or value == "False" or value == "true" or value == "false":
                 return True
         elif isinstance(value, bool):
             return True
@@ -62,9 +62,9 @@ def set_param_to_server(param, value):
             rospy.set_param(param, value)
     elif param == CONVEYOR_LOCK:
         if isinstance(value, str):
-            if value == "True":
+            if value == "True" or value == "true":
                 rospy.set_param(CONVEYOR_LOCK, True)
-            elif value == "False":
+            elif value == "False" or value == "false":
                 rospy.set_param(CONVEYOR_LOCK, False)
         elif isinstance(value, bool):
             rospy.set_param(CONVEYOR_LOCK, value)
@@ -136,17 +136,15 @@ def write_param(param, value):
                             else:
                                 rospy.logerr("input door num is not digit  : %s", value)
                         elif param == CONVEYOR_LOCK:
-                            lock_ = True
                             if isinstance(value, str):
-                                if value == 'True':
-                                    lock_ = True
-                                elif value == 'False':
-                                    lock_ = False
-                                settings[CONVEYOR_LOCK] = lock_
+                                if value == 'True' or value == 'true':
+                                    settings[CONVEYOR_LOCK] = True
+                                elif value == 'False' or value == 'false':
+                                    settings[CONVEYOR_LOCK] = False
                             elif isinstance(value, bool):
                                 settings[CONVEYOR_LOCK] = value
-
-                        settings[param] = value
+                        else:
+                            settings[param] = value
                         yaml.dump(settings, param_file)
                     else:
                         rospy.logwarn("param %s: new value == old_value", param)
