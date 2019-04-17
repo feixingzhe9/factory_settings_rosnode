@@ -61,10 +61,13 @@ def set_param_to_server(param, value):
         elif isinstance(value, int):
             rospy.set_param(param, value)
     elif param == CONVEYOR_LOCK:
-        if value == "True":
-            rospy.set_param(CONVEYOR_LOCK, True)
-        elif value == "False":
-            rospy.set_param(CONVEYOR_LOCK, False)
+        if isinstance(value, str):
+            if value == "True":
+                rospy.set_param(CONVEYOR_LOCK, True)
+            elif value == "False":
+                rospy.set_param(CONVEYOR_LOCK, False)
+        elif isinstance(value, bool):
+            rospy.set_param(CONVEYOR_LOCK, value)
     elif param == AUDIO_CHANNEL:
         rospy.set_param(AUDIO_CHANNEL, value)
     elif param == SONAR_TYPE:
