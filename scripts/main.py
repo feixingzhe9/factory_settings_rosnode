@@ -9,7 +9,7 @@ import rospy
 import rospkg
 from mrobot_srvs.srv import KVPair
 
-path = None 
+path = None
 
 DOOR_NUM = "door_num"
 AUDIO_CHANNEL = "audio_channel"
@@ -28,11 +28,13 @@ AUDIO_CHANNEL_VALUE = (AUDIO_CHANNEL_RK, AUDIO_CHANNEL_X86)
 
 settings = {DOOR_NUM: 3, AUDIO_CHANNEL: AUDIO_CHANNEL_RK, CONVEYOR_LOCK: True, SONAR_TYPE: SONAR_TYPE_M30_8}
 
-#return     : [result, changed, param, value]
-# result    : is value valid
-#changed    : is value changed
-# param     : input param
-# value     : output value
+'''
+return     : [result, changed, param, value]
+ result    : is value valid
+changed    : is value changed
+ param     : input param
+ value     : output value
+'''
 def check_param_value_valid(param, value):
     if param == DOOR_NUM:
         if isinstance(value, str):
@@ -95,7 +97,7 @@ def read_all_params():
             for param in settings:
                 set_param_to_server(param, settings[param])
         param_file.close()
-        if need_write_flag == True:
+        if need_write_flag:
             param_file = open(path, 'w')
             rospy.loginfo("get all params: %s", settings)
             rospy.logwarn("read_all_params: write yaml file, write content: %s", settings)
@@ -108,31 +110,27 @@ def write_param(param, value):
     if not os.path.exists(path):
         rospy.logerr("%s: file not exists", path)
     else:
-        param_file = open(path, 'r+')
         global settings
         rospy.loginfo("settings: %s", settings)
-        if settings is not None:
-            if param in settings:
-                old_value = settings[param]
-                print 'old value: ', old_value, ' new value: ', value
-                if old_value != value:
-                    rospy.loginfo("change param %s :  %s -> %s ", param, old_value, value)
-                    settings[param] = value
-                    set_param_to_server(param, value)
-                    rospy.logwarn("write_param: write yaml file, write content: %s ", settings)
-                    print "test settings:", settings
-                    yaml.dump(settings, param_file)
-                else:
-                    rospy.logwarn("param %s: new value == old_value", param)
+        if param in settings:
+            old_value = settings[param]
+            print 'old value: ', old_value, ' new value: ', value
+            if old_value != value:
+                param_file = open(path, 'w')
+                rospy.loginfo("change param %s :  %s -> %s ", param, old_value, value)
+                settings[param] = value
+                set_param_to_server(param, value)
+                rospy.logwarn("write_param: write yaml file, write content: %s ", settings)
+                print "test settings:", settings
+                yaml.dump(settings, param_file)
+                param_file.close()
             else:
-                rospy.logerr("have no such param %s !", param)
+                rospy.logwarn("param %s: new value == old_value", param)
         else:
-            rospy.logfatal("fatal: setings is None !")
-        param_file.close()
+            rospy.logerr("have no such param %s !", param)
 
 def set_param(req):
     rospy.loginfo("set param, req.request: %s", req)
-    #setting = json.loads(req)
     if req.key in settings:
         [result, changed, param, value] = check_param_value_valid(req.key, req.value)
         if result:
