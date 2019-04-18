@@ -23,55 +23,42 @@ SONAR_TYPE_M30_8 = "m30_8"
 SONAR_TYPE_NOAH_14 = "noah_14"
 SONAR_TYPE_NOAH_16 = "noah_16"
 
+SONAR_TYPE_VALUE = (SONAR_TYPE_M30_8, SONAR_TYPE_NOAH_14, SONAR_TYPE_NOAH_16)
+AUDIO_CHANNEL_VALUE = (AUDIO_CHANNEL_RK, AUDIO_CHANNEL_X86)
+
 settings = {DOOR_NUM: 3, AUDIO_CHANNEL: AUDIO_CHANNEL_RK, CONVEYOR_LOCK: True, SONAR_TYPE: SONAR_TYPE_M30_8}
 
+#return     : [result, changed, param, value]
+# result    : is value valid
+#changed    : is value changed
+# param     : input param
+# value     : output value
 def check_param_value_valid(param, value):
     if param == DOOR_NUM:
         if isinstance(value, str):
             if value.isdigit():
-                if int(value) > 0 and int(value) < 10:
-                    return True
+                if int(value) >= 0 and int(value) < 10:
+                    return [True, True, DOOR_NUM, int(value)]
         elif isinstance(value, int):
-            if value > 0 and value < 10:
-                return True
-        return False
+            if value >= 0 and value < 10:
+                return [True, False, DOOR_NUM, value]
+        return [False, False, DOOR_NUM, value]
     elif param == AUDIO_CHANNEL:
-        if value == AUDIO_CHANNEL_RK or value == AUDIO_CHANNEL_X86:
-            return True
-        return False
+        return [value in AUDIO_CHANNEL_VALUE, False, AUDIO_CHANNEL, value]
     elif param == CONVEYOR_LOCK:
         if isinstance(value, str):
-            if value == "True" or value == "False" or value == "true" or value == "false":
-                return True
+            if value in ['True', 'False', 'true', 'false']:
+                return [True, True, CONVEYOR_LOCK, value in ['True', 'true']]
         elif isinstance(value, bool):
-            return True
-        return False
+            return [True, False, CONVEYOR_LOCK, value]
+        return [False, False, CONVEYOR_LOCK, value]
     elif param == SONAR_TYPE:
-        if value == SONAR_TYPE_M30_8 or value == SONAR_TYPE_NOAH_14 or value == SONAR_TYPE_NOAH_16:
-            return True
-        return False
-    return False
+        return [value in SONAR_TYPE_VALUE, False, SONAR_TYPE, value]
+    return [False, False, SONAR_TYPE, value]
 
 
 def set_param_to_server(param, value):
-    if param == DOOR_NUM:
-        if isinstance(value, str):
-            if value.isdigit():
-                rospy.set_param(param, int(value))
-        elif isinstance(value, int):
-            rospy.set_param(param, value)
-    elif param == CONVEYOR_LOCK:
-        if isinstance(value, str):
-            if value == "True" or value == "true":
-                rospy.set_param(CONVEYOR_LOCK, True)
-            elif value == "False" or value == "false":
-                rospy.set_param(CONVEYOR_LOCK, False)
-        elif isinstance(value, bool):
-            rospy.set_param(CONVEYOR_LOCK, value)
-    elif param == AUDIO_CHANNEL:
-        rospy.set_param(AUDIO_CHANNEL, value)
-    elif param == SONAR_TYPE:
-        rospy.set_param(SONAR_TYPE, value)
+    rospy.set_param(param, value)
 
 
 def file_init():
@@ -95,12 +82,14 @@ def read_all_params():
             if settings_tmp is not None:
                 for param in settings:
                     if param in settings_tmp:
-                        if check_param_value_valid(param, settings_tmp[param]):
-                            if settings[param] != settings_tmp[param]:
-                                need_write_flag = True
-                                settings[param] = settings_tmp[param]
+                        [result, changed, param, value] = check_param_value_valid(param, settings_tmp[param])
+                        if result:
+                            settings[param] = value
                         else:
                             rospy.logerr("read from file: param %s value is %s,  error, using default value %s", param, settings_tmp[param], settings[param])
+                        if changed:
+                            rospy.logwarn("changed")
+                            need_write_flag = True
             else:
                 need_write_flag = True
             for param in settings:
@@ -109,65 +98,51 @@ def read_all_params():
         if need_write_flag == True:
             param_file = open(path, 'w')
             rospy.loginfo("get all params: %s", settings)
+            rospy.logwarn("read_all_params: write yaml file, write content: %s", settings)
             yaml.dump(settings, param_file)
             param_file.close()
 
 def write_param(param, value):
     rospy.loginfo("write_param:   param: %s , value: %s", param, value)
     global path
-    if check_param_value_valid(param, value):
-        if not os.path.exists(path):
-            rospy.logerr("%s: file not exists", path)
-        else:
-            param_file = open(path, 'w')
-            global settings
-            rospy.loginfo("settings: %s", settings)
-            if settings is not None:
-                if param in settings:
-                    old_value = settings[param]
-                    print 'old value: ', old_value, ' new value: ', value
-                    if old_value != value:
-                        rospy.loginfo("change param %s :  %s -> %s ", param, old_value, value)
-
-                        if param == DOOR_NUM:
-                            if value.isdigit():
-                                door_num = int(value)
-                                settings[DOOR_NUM] = door_num
-                            else:
-                                rospy.logerr("input door num is not digit  : %s", value)
-                        elif param == CONVEYOR_LOCK:
-                            if isinstance(value, str):
-                                if value == 'True' or value == 'true':
-                                    settings[CONVEYOR_LOCK] = True
-                                elif value == 'False' or value == 'false':
-                                    settings[CONVEYOR_LOCK] = False
-                            elif isinstance(value, bool):
-                                settings[CONVEYOR_LOCK] = value
-                        else:
-                            settings[param] = value
-                        yaml.dump(settings, param_file)
-                    else:
-                        rospy.logwarn("param %s: new value == old_value", param)
-                else:
-                    rospy.logerr("have no such param %s !", param)
-            else:
-                rospy.logerr("error: setings is None !")
-            param_file.close()
+    if not os.path.exists(path):
+        rospy.logerr("%s: file not exists", path)
     else:
-        rospy.logerr("param error !: param: %s, value: %s", param, value)
+        param_file = open(path, 'r+')
+        global settings
+        rospy.loginfo("settings: %s", settings)
+        if settings is not None:
+            if param in settings:
+                old_value = settings[param]
+                print 'old value: ', old_value, ' new value: ', value
+                if old_value != value:
+                    rospy.loginfo("change param %s :  %s -> %s ", param, old_value, value)
+                    settings[param] = value
+                    set_param_to_server(param, value)
+                    rospy.logwarn("write_param: write yaml file, write content: %s ", settings)
+                    print "test settings:", settings
+                    yaml.dump(settings, param_file)
+                else:
+                    rospy.logwarn("param %s: new value == old_value", param)
+            else:
+                rospy.logerr("have no such param %s !", param)
+        else:
+            rospy.logfatal("fatal: setings is None !")
+        param_file.close()
 
 def set_param(req):
     rospy.loginfo("set param, req.request: %s", req)
     #setting = json.loads(req)
     if req.key in settings:
-        if check_param_value_valid(req.key, req.value):
-            write_param(req.key, req.value)
+        [result, changed, param, value] = check_param_value_valid(req.key, req.value)
+        if result:
+            write_param(param, value)
         else:
             rospy.logerr("req param error:   req.key: %s,  req.value: %s", req.key, req.value)
+            return [False, 'param\'s value is not valid']
     else:
         rospy.logerr("param %s is not support:", req.key)
-        return [True, 'false']
-    read_all_params()
+        return [False, 'param is not support']
 
     return [True, 'ok']
 
